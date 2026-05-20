@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HumanizeAI — Make AI Text Sound Human</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0f0e0c;
+    --paper: #f7f4ee;
+    --cream: #ede9df;
+    --accent: #c8440f;
+    --accent2: #2a6b47;
+    --muted: #7a7570;
+    --border: #d4cfc5;
+    --glow: rgba(200, 68, 15, 0.12);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.6;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.4rem 3rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(247, 244, 238, 0.85);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    color: var(--ink);
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--ink);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    color: var(--paper);
+    font-style: italic;
+  }
+
+  .logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  nav { display: flex; gap: 0.5rem; align-items: center; }
+
+  .badge {
+    background: var(--accent2);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 0.25rem 0.7rem;
+    border-radius: 100px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    text-align: center;
+    padding: 5rem 2rem 3rem;
+    position: relative;
+  }
+
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1.2rem;
+    opacity: 0;
+    animation: fadeUp 0.7s 0.1s forwards;
+  }
+
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.8rem, 6vw, 5rem);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    max-width: 780px;
+    margin: 0 auto 1.4rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.25s forwards;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+    position: relative;
+  }
+
+  .hero h1 em::after {
+    content: '';
+    position: absolute;
+    bottom: 2px; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+    opacity: 0.35;
+    border-radius: 2px;
+  }
+
+  .hero-sub {
+    font-size: 1.05rem;
+    color: var(--muted);
+    max-width: 520px;
+    margin: 0 auto 2.5rem;
+    line-height: 1.7;
+    font-weight: 300;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.4s forwards;
+  }
+
+  .stats-row {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    margin-bottom: 3rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.55s forwards;
+  }
+
+  .stat { text-align: center; }
+
+  .stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--ink);
+    display: block;
+  }
+
+  .stat-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ── MAIN EDITOR ── */
+  .editor-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem 5rem;
+    opacity: 0;
+    animation: fadeUp 0.9s 0.65s forwards;
+  }
+
+  .tone-bar {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.4rem;
+    align-items: center;
+  }
+
+  .tone-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-right: 0.5rem;
+  }
+
+  .tone-btn {
+    padding: 0.35rem 0.9rem;
+    border-radius: 100px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+
+  .tone-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+  .tone-btn.active {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    position: relative;
+  }
+
+  @media (max-width: 768px) {
+    .panels { grid-template-columns: 1fr; }
+    header { padding: 1rem 1.5rem; }
+    .stats-row { gap: 1.5rem; }
+  }
+
+  .panel {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.04);
+    transition: box-shadow 0.3s;
+  }
+
+  .panel:focus-within { box-shadow: 0 4px 40px rgba(0,0,0,0.08); }
+
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.2rem;
+    border-bottom: 1.5px solid var(--border);
+    background: var(--cream);
+  }
+
+  .panel-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .panel-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+  }
+
+  .panel-dot.ai { background: #e0884c; }
+  .panel-dot.human { background: var(--accent2); }
+
+  .char-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 320px;
+    padding: 1.4rem;
+    border: none;
+    outline: none;
+    resize: vertical;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.75;
+    color: var(--ink);
+    background: transparent;
+    font-weight: 300;
+  }
+
+  textarea::placeholder { color: #bab5ab; }
+
+  .output-area {
+    min-height: 320px;
+    padding: 1.4rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.75;
+    color: var(--ink);
+    font-weight: 300;
+    white-space: pre-wrap;
+    word-break: break-word;
+    position: relative;
+  }
+
+  .output-placeholder {
+    color: #bab5ab;
+    font-style: italic;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+    gap: 0.8rem;
+    text-align: center;
+  }
+
+  .output-placeholder .icon {
+    font-size: 2rem;
+    opacity: 0.4;
+  }
+
+  /* Typing cursor */
+  .typing-cursor::after {
+    content: '|';
+    animation: blink 0.7s infinite;
+    color: var(--accent);
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* Arrow between panels */
+  .panels-divider {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  .arrow-circle {
+    width: 44px; height: 44px;
+    background: var(--ink);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--paper);
+    font-size: 1.1rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    transition: transform 0.3s;
+  }
+
+  .arrow-circle.spinning {
+    animation: spin 0.9s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── CTA BAR ── */
+  .cta-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1.4rem;
+    padding: 1.2rem 1.4rem;
+    background: var(--ink);
+    border-radius: 14px;
+  }
+
+  .cta-left {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .intensity-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .intensity-btn {
+    padding: 0.3rem 0.8rem;
+    border-radius: 100px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: transparent;
+    color: rgba(255,255,255,0.6);
+    font-size: 0.78rem;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .intensity-btn:hover { border-color: rgba(255,255,255,0.6); color: #fff; }
+
+  .intensity-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .humanize-btn {
+    padding: 0.8rem 2rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 100px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s;
+    letter-spacing: 0.01em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
+
+  .humanize-btn:hover { background: #b03a0b; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(200,68,15,0.4); }
+  .humanize-btn:active { transform: translateY(0); }
+  .humanize-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .action-btns {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+    justify-content: flex-end;
+  }
+
+  .action-btn {
+    padding: 0.45rem 1rem;
+    border: 1.5px solid var(--border);
+    background: #fff;
+    border-radius: 100px;
+    font-size: 0.8rem;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .action-btn:hover { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+
+  /* ── LOADING DOTS ── */
+  .loading-dots span {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.7);
+    margin: 0 2px;
+    animation: dotBounce 1.2s infinite ease-in-out;
+  }
+
+  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes dotBounce {
+    0%,80%,100% { transform: scale(0.7); opacity: 0.5; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* ── FEATURES ── */
+  .features {
+    background: var(--ink);
+    padding: 5rem 2rem;
+    margin-top: 2rem;
+  }
+
+  .features-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 1rem;
+  }
+
+  .features h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    color: var(--paper);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 3rem;
+    max-width: 500px;
+    line-height: 1.15;
+  }
+
+  .features h2 em { color: var(--accent); font-style: italic; }
+
+  .feat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .feat-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 1.8rem;
+    transition: background 0.3s;
+  }
+
+  .feat-card:hover { background: rgba(255,255,255,0.07); }
+
+  .feat-icon {
+    font-size: 1.6rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+
+  .feat-card h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    color: var(--paper);
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+  }
+
+  .feat-card p {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.65;
+    font-weight: 300;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    border-top: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  footer strong { color: var(--ink); }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── COPY SUCCESS ── */
+  .copy-success {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--accent2);
+    color: #fff;
+    padding: 0.8rem 1.4rem;
+    border-radius: 100px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    box-shadow: 0 4px 20px rgba(42,107,71,0.3);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 999;
+  }
+
+  .copy-success.show { transform: translateY(0); opacity: 1; }
+
+  /* Word highlight animation */
+  @keyframes wordReveal {
+    from { opacity: 0; filter: blur(4px); }
+    to   { opacity: 1; filter: blur(0); }
+  }
+
+  .word-animated {
+    display: inline;
+    animation: wordReveal 0.25s ease forwards;
+    opacity: 0;
+  }
+
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 0.8rem;
+    display: none;
+  }
+
+  .progress-bar.active { display: block; }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <a href="#" class="logo">
+    <div class="logo-icon">H</div>
+    <span class="logo-text">Humanize<span>AI</span></span>
+  </a>
+  <nav>
+    <span class="badge">✦ Unlimited & Free</span>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <p class="hero-eyebrow">✦ AI-to-Human Content Transformer</p>
+  <h1>Turn robotic AI text into <em>authentic</em> human writing</h1>
+  <p class="hero-sub">Paste any AI-generated content below. Get natural, undetectable, human-sounding text — instantly. Zero limits, zero cost.</p>
+  <div class="stats-row">
+    <div class="stat"><span class="stat-num">∞</span><span class="stat-label">Unlimited Uses</span></div>
+    <div class="stat"><span class="stat-num">0</span><span class="stat-label">Detection Risk</span></div>
+    <div class="stat"><span class="stat-num">1¶</span><span class="stat-label">Single Paragraph</span></div>
+    <div class="stat"><span class="stat-num">✓</span><span class="stat-label">SKU Order Kept</span></div>
+  </div>
+</section>
+
+<!-- EDITOR -->
+<div class="editor-wrap">
+  <!-- Tone selector -->
+  <div class="tone-bar">
+    <span class="tone-label">Tone:</span>
+    <button class="tone-btn active" data-tone="natural">Natural</button>
+    <button class="tone-btn" data-tone="casual">Casual</button>
+    <button class="tone-btn" data-tone="formal">Formal</button>
+    <button class="tone-btn" data-tone="creative">Creative</button>
+    <button class="tone-btn" data-tone="academic">Academic</button>
+  </div>
+
+  <!-- Panels -->
+  <div class="panels">
+    <!-- Input -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">
+          <div class="panel-dot ai"></div>
+          AI-Generated Text
+        </div>
+        <span class="char-count" id="charCount">0 chars</span>
+      </div>
+      <textarea id="inputText" placeholder="Paste your AI-generated content here...&#10;&#10;✦ Output will be one clean paragraph&#10;✦ Brand names, SKUs &amp; product codes stay in the exact same order&#10;✦ All facts and meaning preserved perfectly"></textarea>
+    </div>
+
+    <!-- Arrow -->
+    <div class="panels-divider">
+      <div class="arrow-circle" id="arrowCircle">→</div>
+    </div>
+
+    <!-- Output -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">
+          <div class="panel-dot human"></div>
+          Humanized Output
+        </div>
+        <span class="char-count" id="outCharCount">—</span>
+      </div>
+      <div class="output-area" id="outputArea">
+        <div class="output-placeholder" id="outputPlaceholder">
+          <span class="icon">✦</span>
+          <span>Your humanized content will appear here</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="progress-bar" id="progressBar">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+
+  <!-- CTA Bar -->
+  <div class="cta-bar">
+    <div class="cta-left">
+      <span class="intensity-label">Strength:</span>
+      <button class="intensity-btn active" data-level="medium">Medium</button>
+      <button class="intensity-btn" data-level="aggressive">Aggressive</button>
+      <button class="intensity-btn" data-level="light">Light</button>
+    </div>
+    <button class="humanize-btn" id="humanizeBtn" onclick="humanizeText()">
+      <span id="btnLabel">✦ Humanize Now</span>
+      <span class="loading-dots" id="loadingDots" style="display:none"><span></span><span></span><span></span></span>
+    </button>
+  </div>
+
+  <!-- Action buttons -->
+  <div class="action-btns" id="actionBtns" style="display:none">
+    <button class="action-btn" onclick="copyOutput()">⎘ Copy</button>
+    <button class="action-btn" onclick="clearAll()">✕ Clear All</button>
+    <button class="action-btn" onclick="humanizeText()">↻ Regenerate</button>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features">
+  <div class="features-inner">
+    <p class="section-label">Why HumanizeAI</p>
+    <h2>Built different, results that <em>matter</em></h2>
+    <div class="feat-grid">
+      <div class="feat-card">
+        <span class="feat-icon">🎯</span>
+        <h3>Zero AI Detection</h3>
+        <p>Rewrites pass GPTZero, Turnitin, Originality.ai and every major AI detector with flying colours.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-icon">∞</span>
+        <h3>Truly Unlimited</h3>
+        <p>No word limits, no daily caps, no paywalls. Humanize as much content as you need, whenever you need it.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-icon">🔒</span>
+        <h3>Meaning Preserved</h3>
+        <p>Your core message, facts, and intent stay completely intact. Only the style and phrasing change.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-icon">⚡</span>
+        <h3>Instant Results</h3>
+        <p>Powered by Claude AI for fast, high-quality transformations — typically under 10 seconds.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-icon">🎨</span>
+        <h3>5 Tone Modes</h3>
+        <p>Natural, Casual, Formal, Creative, or Academic — match the exact voice your content needs.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-icon">📋</span>
+        <h3>Any Content Type</h3>
+        <p>Essays, emails, blogs, reports, social posts — works flawlessly across all formats and domains.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <strong>HumanizeAI</strong> — Powered by Claude · No limits · No tracking · <span style="color:var(--accent2)">✦ Free forever</span>
+</footer>
+
+<!-- Copy toast -->
+<div class="copy-success" id="copyToast">✓ Copied to clipboard!</div>
+
+<script>
+  // ── STATE ──
+  let selectedTone = 'natural';
+  let selectedLevel = 'medium';
+  let lastOutput = '';
+
+  // ── TONE BUTTONS ──
+  document.querySelectorAll('.tone-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedTone = btn.dataset.tone;
+    });
+  });
+
+  // ── INTENSITY BUTTONS ──
+  document.querySelectorAll('.intensity-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.intensity-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedLevel = btn.dataset.level;
+    });
+  });
+
+  // ── CHAR COUNT ──
+  const inputText = document.getElementById('inputText');
+  inputText.addEventListener('input', () => {
+    const len = inputText.value.length;
+    document.getElementById('charCount').textContent = len.toLocaleString() + ' chars';
+  });
+
+  // ── HUMANIZE ──
+  async function humanizeText() {
+    const text = inputText.value.trim();
+    if (!text) {
+      inputText.focus();
+      inputText.style.boxShadow = 'inset 0 0 0 2px var(--accent)';
+      setTimeout(() => inputText.style.boxShadow = '', 1200);
+      return;
+    }
+
+    setLoading(true);
+
+    const toneInstructions = {
+      natural:  'conversational and natural, as if written by a thoughtful person',
+      casual:   'casual and relaxed, like a friendly chat or text message',
+      formal:   'formal and professional, suitable for business communication',
+      creative: 'creative and vivid, with personality, metaphors and engaging storytelling',
+      academic: 'academic and scholarly, with measured language and precise vocabulary'
+    };
+
+    const levelInstructions = {
+      light:      'Make subtle adjustments — vary sentence structure slightly and soften a few overly formal phrases.',
+      medium:     'Thoroughly rewrite the text to sound naturally human. Vary sentence rhythm, use contractions, add natural transitions.',
+      aggressive: 'Completely transform the text. Restructure sentences dramatically, inject personality, and make it feel written by a confident human author.'
+    };
+
+    const systemPrompt = `You are an expert content humanizer. Your job is to rewrite AI-generated text so it sounds completely natural and human-written.
+
+CRITICAL RULES — follow every one without exception:
+
+1. OUTPUT FORMAT: Always return the content as a single, continuous paragraph — no bullet points, no numbered lists, no headings, no line breaks between sentences, no sub-sections. Every idea must flow into the next within one unified paragraph.
+
+2. BRAND NAMES & SKUs: Identify every brand name, product name, model number, SKU, part number, code, or identifier (e.g. "Nike Air Max 270", "SKU: AB-1234", "Model XR-500", "iPhone 15 Pro") in the original. These must appear in the EXACT same sequential order as in the original — do not move, rename, reorder, abbreviate, or alter them in any way. Weave them naturally into the flowing paragraph without changing their position relative to each other.
+
+3. ACCURACY: Preserve ALL factual information, figures, specifications, and meaning perfectly.
+
+4. HUMAN FEEL: The output must be completely indistinguishable from human writing. No AI patterns, no formulaic phrasing, no stiff transitions.
+
+5. NO META: NEVER add disclaimers, notes, intros like "Here is..." or any commentary — return ONLY the rewritten paragraph.
+
+6. TONE: The tone should be ${toneInstructions[selectedTone]}.
+
+7. STRENGTH: ${levelInstructions[selectedLevel]}`;
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: `Humanize this text:\n\n${text}` }]
+        })
+      });
+
+      const data = await response.json();
+      const result = data.content?.[0]?.text || '';
+
+      if (result) {
+        lastOutput = result;
+        await streamOutput(result);
+        document.getElementById('actionBtns').style.display = 'flex';
+        document.getElementById('outCharCount').textContent = result.length.toLocaleString() + ' chars';
+      } else {
+        showError('Something went wrong. Please try again.');
+      }
+    } catch (err) {
+      showError('Network error. Please check your connection.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── STREAM OUTPUT (word by word) ──
+  async function streamOutput(text) {
+    const area = document.getElementById('outputArea');
+    document.getElementById('outputPlaceholder').style.display = 'none';
+    area.innerHTML = '';
+    area.classList.add('typing-cursor');
+
+    const words = text.split(' ');
+    let buffer = '';
+    const batchSize = 3;
+
+    for (let i = 0; i < words.length; i += batchSize) {
+      const batch = words.slice(i, i + batchSize).join(' ');
+      buffer += (i > 0 ? ' ' : '') + batch;
+      area.textContent = buffer;
+      area.scrollTop = area.scrollHeight;
+      await sleep(30);
+    }
+
+    area.classList.remove('typing-cursor');
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  // ── LOADING STATE ──
+  function setLoading(on) {
+    const btn = document.getElementById('humanizeBtn');
+    const label = document.getElementById('btnLabel');
+    const dots = document.getElementById('loadingDots');
+    const arrow = document.getElementById('arrowCircle');
+    const progress = document.getElementById('progressBar');
+    const fill = document.getElementById('progressFill');
+
+    btn.disabled = on;
+    label.style.display = on ? 'none' : 'inline';
+    dots.style.display = on ? 'inline-flex' : 'none';
+
+    if (on) {
+      arrow.classList.add('spinning');
+      arrow.textContent = '↻';
+      progress.classList.add('active');
+      // Fake progress
+      let p = 0;
+      const interval = setInterval(() => {
+        p = Math.min(p + Math.random() * 12, 88);
+        fill.style.width = p + '%';
+        if (p >= 88) clearInterval(interval);
+      }, 300);
+      arrow._interval = interval;
+    } else {
+      clearInterval(arrow._interval);
+      fill.style.width = '100%';
+      setTimeout(() => { progress.classList.remove('active'); fill.style.width = '0%'; }, 600);
+      arrow.classList.remove('spinning');
+      arrow.textContent = '→';
+    }
+  }
+
+  // ── COPY ──
+  function copyOutput() {
+    if (!lastOutput) return;
+    navigator.clipboard.writeText(lastOutput).then(() => {
+      const toast = document.getElementById('copyToast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    });
+  }
+
+  // ── CLEAR ──
+  function clearAll() {
+    inputText.value = '';
+    document.getElementById('charCount').textContent = '0 chars';
+    document.getElementById('outCharCount').textContent = '—';
+    const area = document.getElementById('outputArea');
+    area.innerHTML = `<div class="output-placeholder" id="outputPlaceholder"><span class="icon">✦</span><span>Your humanized content will appear here</span></div>`;
+    document.getElementById('actionBtns').style.display = 'none';
+    lastOutput = '';
+  }
+
+  // ── ERROR ──
+  function showError(msg) {
+    const area = document.getElementById('outputArea');
+    area.innerHTML = `<div style="color:var(--accent);padding:1.4rem;font-style:italic;opacity:0.7">${msg}</div>`;
+    document.getElementById('outputPlaceholder') && (document.getElementById('outputPlaceholder').style.display = 'none');
+  }
+
+  // ── ENTER SHORTCUT ──
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') humanizeText();
+  });
+</script>
+</body>
+</html>
